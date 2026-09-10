@@ -1,0 +1,227 @@
+// Prisma schema for Plataforma de Planejamento e Gestão Financeira.
+//
+// Architectural note (PF -> PJ):
+// Every financial record (accounts, categories, transactions, investments,
+// goals, budgets) belongs to a `FinancialEntity`, not directly to a `User`.
+// A User can own multiple entities. Today every user gets exactly one
+// entity of type PF (Pessoa Física) on signup. A future Pessoa Jurídica
+// module plugs in by (a) adding `PJ` usage of the same entity concept and
+// (b) adding new models (AccountsPayable, AccountsReceivable, CashFlow,
+// DreLine, ...) that reference FinancialEntity — without touching any of
+// the models below. See /ARCHITECTURE.md for the full extension plan.
+//
+// Note on enums: SQLite (used for local dev) has no native enum type, so
+// enum-like fields below are plain Strings. The allowed values are
+// documented here and enforced by Zod schemas in src/modules/*/routes.ts.
+// Switching `provider` to "postgresql" for production can optionally
+// convert these back to real Prisma enums later without changing the data.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Swap to "postgresql" for production; models below are portable.
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// EntityType: "PF" | "PJ"
+// AccountType: "CHECKING" (conta corrente) | "SAVINGS" (poupança) | "DIGITAL" | "CREDIT_CARD"
+// TransactionType: "INCOME" | "EXPENSE"
+// PaymentMethod: "PIX" | "CREDIT_CARD" | "DEBIT_CARD" | "BOLETO" | "TRANSFER" | "CASH"
+// RecurrenceType: "NONE" | "WEEKLY" | "MONTHLY" | "YEARLY"
+// ExpenseKind (expense categories only): "ESSENTIAL" | "LEISURE" | "EDUCATION" | "SHOPPING" | "FINANCIAL" | "INVESTMENT" | "OTHER"
+// InvestmentClass: "FIXED_INCOME" (renda fixa) | "VARIABLE_INCOME" (renda variável) | "FUND" (fundos)
+// InvestmentSubtype: "TESOURO_DIRETO" | "CDB" | "RDB" | "LCI" | "LCA" | "STOCK" | "FII" | "ETF" | "FUND" | "OTHER"
+// InvestmentMovementType: "CONTRIBUTION" (aporte) | "WITHDRAWAL" (resgate) | "YIELD" (rendimento)
+
+model User {
+  id           String            @id @default(cuid())
+  name         String
+  email        String            @unique
+  passwordHash String
+  createdAt    DateTime          @default(now())
+  entities     FinancialEntity[]
+}
+
+model FinancialEntity {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  type      String   @default("PF") // EntityType
+  createdAt DateTime @default(now())
+
+  accounts     Account[]
+  categories   Category[]
+  transactions Transaction[]
+  investments  Investment[]
+  goals        Goal[]
+  budgets      Budget[]
+
+  @@index([userId])
+}
+
+model Account {
+  id       String          @id @default(cuid())
+  entityId String
+  entity   FinancialEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  name        String
+  type        String // AccountType
+  institution String?
+
+  initialBalanceCents Int @default(0)
+
+  // Credit-card-only fields
+  creditLimitCents Int?
+  closingDay       Int? // day of month the invoice closes
+  dueDay           Int? // day of month the invoice is due
+
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  transactions Transaction[]
+
+  @@index([entityId])
+}
+
+model Category {
+  id       String          @id @default(cuid())
+  entityId String
+  entity   FinancialEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  name        String
+  type        String // TransactionType
+  expenseKind String? // ExpenseKind
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  subcategories Subcategory[]
+  transactions  Transaction[]
+  budgets       Budget[]
+
+  @@index([entityId])
+}
+
+model Subcategory {
+  id         String   @id @default(cuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name       String
+  createdAt  DateTime @default(now())
+
+  transactions Transaction[]
+
+  @@index([categoryId])
+}
+
+model Transaction {
+  id       String          @id @default(cuid())
+  entityId String
+  entity   FinancialEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  subcategoryId String?
+  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+
+  type        String // TransactionType
+  description String
+  amountCents Int
+  date        DateTime
+
+  paymentMethod String // PaymentMethod
+
+  recurrence        String    @default("NONE") // RecurrenceType
+  recurrenceEndDate DateTime?
+
+  // Credit card installments (parcelas) and recurring occurrences both use
+  // this as a generic "series id" so every row belonging to the same
+  // purchase/recurrence can be found and bulk-edited/deleted together.
+  installmentGroupId String?
+  installmentNumber  Int?
+  installmentTotal   Int?
+
+  // For credit card transactions: which invoice (YYYY-MM) this falls into.
+  invoiceMonth String?
+
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([entityId, date])
+  @@index([accountId])
+  @@index([categoryId])
+  @@index([installmentGroupId])
+}
+
+model Investment {
+  id       String          @id @default(cuid())
+  entityId String
+  entity   FinancialEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  class   String // InvestmentClass
+  subtype String // InvestmentSubtype
+  name    String
+  broker  String?
+
+  investedAmountCents Int
+  currentAmountCents  Int
+
+  purchaseDate DateTime
+  maturityDate DateTime?
+  rateInfo     String? // e.g. "CDI + 1.5%", "IPCA + 6%"
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  movements InvestmentMovement[]
+
+  @@index([entityId])
+}
+
+model InvestmentMovement {
+  id           String     @id @default(cuid())
+  investmentId String
+  investment   Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  date         DateTime
+  type         String // InvestmentMovementType
+  amountCents  Int
+  createdAt    DateTime   @default(now())
+
+  @@index([investmentId])
+}
+
+model Goal {
+  id       String          @id @default(cuid())
+  entityId String
+  entity   FinancialEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  name               String
+  targetAmountCents  Int
+  currentAmountCents Int       @default(0)
+  targetDate         DateTime?
+  createdAt          DateTime  @default(now())
+
+  @@index([entityId])
+}
+
+model Budget {
+  id       String          @id @default(cuid())
+  entityId String
+  entity   FinancialEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  month              String // "YYYY-MM"
+  plannedAmountCents Int
+  createdAt          DateTime @default(now())
+
+  @@unique([categoryId, month])
+  @@index([entityId, month])
+}
