@@ -9,6 +9,9 @@ const NAV_ITEMS = [
   { to: "/investimentos", label: "Investimentos" },
   { to: "/metas", label: "Metas" },
   { to: "/orcamento", label: "Orçamento" },
+  { to: "/obrigacoes", label: "Obrigações" },
+  { to: "/clientes", label: "Clientes" },
+  { to: "/tipos-obrigacao", label: "Tipos de Obrigação" },
 ];
 
 export default function Layout() {

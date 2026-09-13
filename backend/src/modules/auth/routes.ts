@@ -6,6 +6,7 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { parseOrThrow } from "../../utils/validate";
 import { requireAuth, signToken, AuthedRequest } from "../../middleware/auth";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../../data/defaultCategories";
+import { DEFAULT_OBLIGATION_TYPES } from "../../data/defaultObligationTypes";
 
 const router = Router();
 
@@ -58,6 +59,12 @@ router.post(
           isDefault: true,
           subcategories: { create: cat.subcategories.map((name) => ({ name })) },
         },
+      });
+    }
+
+    for (const type of DEFAULT_OBLIGATION_TYPES) {
+      await prisma.obligationType.create({
+        data: { ...type, userId: user.id, isDefault: true },
       });
     }
 

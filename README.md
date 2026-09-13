@@ -20,6 +20,21 @@ Pessoa Jurídica sem precisar ser reconstruída (veja [ARCHITECTURE.md](./ARCHIT
 - **Dashboard e análises**: saldo mensal, despesas por categoria, %
   da renda comprometida e evolução patrimonial.
 
+## Funcionalidades (Contador — Obrigações Contábeis)
+
+Módulo para o contador autônomo controlar o envio das obrigações dos seus
+clientes (Simples Nacional e MEI):
+
+- **Clientes**: cadastro das empresas/MEIs atendidos, com regime tributário
+  e as obrigações que se aplicam a cada um (ligando/desligando por cliente).
+- **Tipos de obrigação**: catálogo editável de obrigações mensais (ex.:
+  PGDAS-D, DCTFWeb, Escrituração Contábil) e anuais com mês fixo (ex.: DEFIS
+  em fevereiro, emissão de TFE em junho) — novos tipos podem ser adicionados
+  sem alterar código.
+- **Painel mensal de obrigações**: para cada mês, lista o que vence em todos
+  os clientes (calculado a partir da regra de vencimento de cada obrigação),
+  com status Pendente/Atrasado/Enviado, número de protocolo e observações.
+
 ## Stack
 
 - **Backend**: Node.js + TypeScript + Express + Prisma ORM + SQLite (dev).

@@ -4,6 +4,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../src/data/defaultCategories";
+import { DEFAULT_OBLIGATION_TYPES } from "../src/data/defaultObligationTypes";
 
 const prisma = new PrismaClient();
 
@@ -156,6 +157,39 @@ async function main() {
       targetAmountCents: 3000000,
       currentAmountCents: 1000000,
       targetDate: new Date(now.getFullYear() + 1, now.getMonth(), 1),
+    },
+  });
+
+  const obligationTypes = [];
+  for (const type of DEFAULT_OBLIGATION_TYPES) {
+    obligationTypes.push(
+      await prisma.obligationType.create({ data: { ...type, userId: user.id, isDefault: true } })
+    );
+  }
+
+  const demoClient = await prisma.client.create({
+    data: {
+      userId: user.id,
+      name: "Padaria Pão Quente LTDA",
+      document: "12.345.678/0001-99",
+      regime: "SIMPLES_NACIONAL",
+      obligations: { create: obligationTypes.map((t) => ({ obligationTypeId: t.id })) },
+    },
+    include: { obligations: true },
+  });
+
+  const previousMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const previousMonthCompetence = `${previousMonthDate.getFullYear()}-${String(
+    previousMonthDate.getMonth() + 1
+  ).padStart(2, "0")}`;
+  const pgdasObligation = demoClient.obligations.find(
+    (o) => o.obligationTypeId === obligationTypes.find((t) => t.name === "PGDAS-D")!.id
+  )!;
+  await prisma.obligationCompletion.create({
+    data: {
+      clientObligationId: pgdasObligation.id,
+      competence: previousMonthCompetence,
+      protocolNumber: "REC-000123",
     },
   });
 

@@ -88,3 +88,54 @@ export interface Budget {
   plannedAmountCents: number;
   category?: Category;
 }
+
+export interface ObligationType {
+  id: string;
+  name: string;
+  recurrence: "MONTHLY" | "ANNUAL";
+  dueDay: number;
+  dueMonthOffset: number;
+  dueMonth: number | null;
+  isDefault: boolean;
+}
+
+export interface ClientObligation {
+  id: string;
+  clientId: string;
+  obligationTypeId: string;
+  active: boolean;
+  obligationType: ObligationType;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  document: string | null;
+  regime: "MEI" | "SIMPLES_NACIONAL";
+  active: boolean;
+  notes: string | null;
+  obligations: ClientObligation[];
+}
+
+export interface ObligationCompletion {
+  id: string;
+  clientObligationId: string;
+  competence: string;
+  completedAt: string;
+  protocolNumber: string | null;
+  notes: string | null;
+}
+
+export interface ObligationDashboardItem {
+  clientObligationId: string;
+  clientId: string;
+  clientName: string;
+  clientRegime: "MEI" | "SIMPLES_NACIONAL";
+  obligationTypeId: string;
+  obligationTypeName: string;
+  recurrence: "MONTHLY" | "ANNUAL";
+  competence: string;
+  dueDate: string;
+  status: "DONE" | "LATE" | "PENDING";
+  completion: ObligationCompletion | null;
+}
