@@ -64,6 +64,30 @@ Nenhum desses itens exige alterar `Account`, `Category`, `Transaction`,
 `Investment`, `Goal` ou `Budget` — eles só ganham nova companhia ao lado,
 todos amarrados por `entityId`.
 
+## Módulo à parte: Obrigações Contábeis (prática do contador)
+
+`Client`, `ObligationType`, `ClientObligation` e `ObligationCompletion`
+(backend/src/modules/{clients,obligationTypes,clientObligations,obligations})
+ficam de fora do modelo `FinancialEntity` de propósito: eles não são dados
+financeiros do usuário (PF/PJ), e sim dados da **prática profissional** do
+contador — quais empresas ele atende e quais obrigações cada uma precisa
+cumprir. Por isso pertencem diretamente a `User`, não a uma entidade.
+
+- `ObligationType` é o catálogo (ex.: PGDAS-D, DCTFWeb), com a regra de
+  vencimento (mensal com dia + deslocamento de mês, ou anual com mês fixo).
+  É seedado com os 5 tipos padrão no cadastro do usuário
+  (`src/data/defaultObligationTypes.ts`) mas pode ser editado/expandido
+  depois pelo próprio contador, sem alteração de código.
+- `ClientObligation` liga um `Client` a um `ObligationType` (com `active`
+  para desligar uma obrigação que não se aplica a um cliente específico,
+  sem perder o histórico).
+- `ObligationCompletion` só existe para competências já enviadas — nada é
+  pré-criado para competências futuras/pendentes. O painel mensal
+  (`GET /api/obligations/dashboard?month=YYYY-MM`) calcula quais obrigações
+  vencem no mês pedido a partir da regra de cada `ObligationType` e cruza
+  com `ObligationCompletion` para determinar Pendente/Atrasado/Enviado —
+  dispensando qualquer cron/scheduler.
+
 ## Outras decisões de design relevantes
 
 - **Valores monetários em centavos (`Int`)**: evita erros de

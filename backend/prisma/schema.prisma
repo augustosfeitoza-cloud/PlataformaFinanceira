@@ -35,6 +35,16 @@ datasource db {
 // InvestmentClass: "FIXED_INCOME" (renda fixa) | "VARIABLE_INCOME" (renda variável) | "FUND" (fundos)
 // InvestmentSubtype: "TESOURO_DIRETO" | "CDB" | "RDB" | "LCI" | "LCA" | "STOCK" | "FII" | "ETF" | "FUND" | "OTHER"
 // InvestmentMovementType: "CONTRIBUTION" (aporte) | "WITHDRAWAL" (resgate) | "YIELD" (rendimento)
+//
+// Accounting obligations module (contador autônomo controlando o envio de
+// obrigações mensais/anuais dos seus clientes PJ/MEI). This is deliberately
+// scoped directly to `User` (the accountant), not to `FinancialEntity`: it
+// tracks the accountant's professional practice (which client companies
+// exist and which filings are due for each), not the accountant's own
+// personal/business finances. See ARCHITECTURE.md.
+//
+// ClientRegime: "MEI" | "SIMPLES_NACIONAL"
+// ObligationRecurrence: "MONTHLY" | "ANNUAL"
 
 model User {
   id           String            @id @default(cuid())
@@ -43,6 +53,9 @@ model User {
   passwordHash String
   createdAt    DateTime          @default(now())
   entities     FinancialEntity[]
+
+  clients         Client[]
+  obligationTypes ObligationType[]
 }
 
 model FinancialEntity {
@@ -224,4 +237,83 @@ model Budget {
 
   @@unique([categoryId, month])
   @@index([entityId, month])
+}
+
+model Client {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name     String // razão social / nome do cliente
+  document String? // CNPJ ou CPF (MEI)
+  regime   String // ClientRegime
+  active   Boolean  @default(true)
+  notes    String?
+  createdAt DateTime @default(now())
+
+  obligations ClientObligation[]
+
+  @@index([userId])
+}
+
+// A obligation type is the *catalog* entry (ex.: "PGDAS-D", "DCTFWeb"),
+// owned by the accountant so they can add/edit deadlines beyond the
+// defaults seeded on signup, without any code change.
+model ObligationType {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name       String
+  recurrence String // ObligationRecurrence
+
+  // MONTHLY: due date = (competence month + dueMonthOffset months), day dueDay.
+  dueDay         Int @default(20)
+  dueMonthOffset Int @default(1)
+
+  // ANNUAL only: due date = (year, dueMonth, dueDay).
+  dueMonth Int?
+
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  clientObligations ClientObligation[]
+
+  @@index([userId])
+}
+
+// Links a Client to an ObligationType they must file. `active` lets the
+// accountant turn a filing off for a specific client (e.g. a MEI that
+// doesn't file DCTFWeb) without deleting the catalog entry.
+model ClientObligation {
+  id               String         @id @default(cuid())
+  clientId         String
+  client           Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  obligationTypeId String
+  obligationType   ObligationType @relation(fields: [obligationTypeId], references: [id], onDelete: Cascade)
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  completions ObligationCompletion[]
+
+  @@unique([clientId, obligationTypeId])
+  @@index([clientId])
+}
+
+// One row per period actually filed/sent. Absence of a row for a given
+// competence means it's still pending — pending periods are computed on
+// read, not pre-created, so nothing needs a scheduler/cron.
+model ObligationCompletion {
+  id                 String           @id @default(cuid())
+  clientObligationId String
+  clientObligation   ClientObligation @relation(fields: [clientObligationId], references: [id], onDelete: Cascade)
+
+  competence     String // "YYYY-MM" (mensal) ou "YYYY" (anual)
+  completedAt    DateTime @default(now())
+  protocolNumber String?
+  notes          String?
+
+  @@unique([clientObligationId, competence])
+  @@index([clientObligationId])
 }

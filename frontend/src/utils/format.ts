@@ -22,6 +22,14 @@ export function currentMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+export function shiftMonthStr(month: string, delta: number): string {
+  const [y, m] = month.split("-").map(Number);
+  const total = m - 1 + delta;
+  const year = y + Math.floor(total / 12);
+  const monthNum = ((total % 12) + 12) % 12 + 1;
+  return `${year}-${String(monthNum).padStart(2, "0")}`;
+}
+
 export const ACCOUNT_TYPE_LABEL: Record<string, string> = {
   CHECKING: "Conta Corrente",
   SAVINGS: "Poupança",
@@ -60,6 +68,22 @@ export const INVESTMENT_CLASS_LABEL: Record<string, string> = {
   VARIABLE_INCOME: "Renda Variável",
   FUND: "Fundos",
 };
+
+export const CLIENT_REGIME_LABEL: Record<string, string> = {
+  MEI: "MEI",
+  SIMPLES_NACIONAL: "Simples Nacional",
+};
+
+export const OBLIGATION_STATUS_LABEL: Record<string, string> = {
+  DONE: "Enviado",
+  LATE: "Atrasado",
+  PENDING: "Pendente",
+};
+
+export function formatDateStr(date: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("pt-BR");
+}
 
 export const INVESTMENT_SUBTYPE_LABEL: Record<string, string> = {
   TESOURO_DIRETO: "Tesouro Direto",

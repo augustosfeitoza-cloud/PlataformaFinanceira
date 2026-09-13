@@ -9,6 +9,10 @@ import investmentRoutes from "./modules/investments/routes";
 import goalRoutes from "./modules/goals/routes";
 import budgetRoutes from "./modules/budgets/routes";
 import reportRoutes from "./modules/reports/routes";
+import clientRoutes from "./modules/clients/routes";
+import obligationTypeRoutes from "./modules/obligationTypes/routes";
+import clientObligationRoutes from "./modules/clientObligations/routes";
+import obligationRoutes from "./modules/obligations/routes";
 import { ValidationError } from "./utils/validate";
 
 const app = express();
@@ -26,6 +30,10 @@ app.use("/api/investments", investmentRoutes);
 app.use("/api/goals", goalRoutes);
 app.use("/api/budgets", budgetRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/clients", clientRoutes);
+app.use("/api/obligation-types", obligationTypeRoutes);
+app.use("/api/client-obligations", clientObligationRoutes);
+app.use("/api/obligations", obligationRoutes);
 
 // Centralized error handler: turns ValidationError and unexpected errors
 // into consistent JSON responses instead of leaking stack traces.
