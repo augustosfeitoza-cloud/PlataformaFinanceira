@@ -8,9 +8,10 @@ O site é estático (um `index.html` e a pasta `assets/`). Não precisa de servi
 site-asf/
 ├── index.html          ← o site inteiro (textos, cores, formulário)
 └── assets/
-    ├── logo.png        ← logo oficial (fundo transparente)
-    ├── logo-branco.png ← versão branca, usada no rodapé
-    └── favicon.png     ← ícone da aba do navegador
+    ├── logo.png                  ← logo oficial (fundo transparente)
+    ├── favicon.png               ← ícone da aba do navegador
+    ├── post-escritorio.jpg       ← post do Instagram (pasta Comunicação)
+    └── post-simples-nacional.jpg ← post do Instagram (pasta Comunicação)
 ```
 
 ## 1. Publicar (opção recomendada: Netlify, gratuito)
@@ -54,4 +55,13 @@ const EMAIL    = 'asfcontabil@asfcontabil.com.br';
 const MSG_PADRAO = 'Olá, ASF Contabilidade! ...';
 ```
 
-Os números exibidos na tela aparecem também nas seções "Fale conosco" e no rodapé — busque por `97875-7407` para trocar todos. Textos dos serviços e da seção "Sobre" podem ser editados diretamente no HTML.
+Ao mudar essas duas linhas, o número e o e-mail mudam em todo o site (botões, faixa verde, contato e rodapé). Textos dos serviços e da seção "Sobre" podem ser editados diretamente no HTML.
+
+## Identidade visual
+
+Segue os materiais da pasta **1. ASF Contabil › 5. Comunicacao** do Google Drive:
+
+- Verde ASF `#006553`, cinza de fundo `#D9D9D9`, grafite `#373738` e azul-marinho `#000040` (selo "conte conosco!").
+- Títulos em Montserrat ExtraBold, caixa alta e verde; lista de serviços em fonte serifada (Lora) caixa alta sobre a faixa verde, como no post "Nossos serviços".
+- Frase da marca em itálico: "Tranquilidade, agilidade e confiança."
+- Elementos gráficos dos posts: círculos concêntricos, régua verde vertical à esquerda, pontilhado e barra verde de WhatsApp.
